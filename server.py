@@ -32,7 +32,7 @@ def handle_user():
         try:
             result = subprocess.run([CUSER_DATA_FILE_PATH, EventID, Name, CarType, CarNumber])
         except Exception as e:
-            pirnt(e, "./Cuser_data 유저 데이터 등록 중 에러 발생")
+            print(e, "./Cuser_data 유저 데이터 등록 중 에러 발생")
             return {"message":"유저 데이터 등록 실패"}, 500
         else:
             user_data_management.register_data(UserData=UserData)
