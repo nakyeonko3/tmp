@@ -46,12 +46,67 @@ FILE *read_byte_binfile(const char *filename)
     return file;
 }
 
-// 사용자 데이터 등록 함수
-void register_data(FILE *file, const char *Name, const char *CarType, const char *CarNumber)
+// 데이터 파일 초기화 및 헤더 작성
+void Initialize_bin_file(const char *filename)
 {
+    FILE *file = fopen(filename, "wb");
+    if (!file)
+    {
+        perror("File opening failed");
+        return;
+    }
 
-    Header header = {0};
-    Offset offset = {0};
+    Header header = {0, 0, 0, sizeof(UserData), sizeof(ParkingSpace)};
+    fwrite(&header, sizeof(header), 1, file); // 파일 시작 부분에 헤더 저장
+    printf("Initialize_bin_file 초기화");
+
+    fclose(file);
+}
+
+int search_data(const char *filename, const char *CarNumber)
+{
+    FILE *file = fopen(filename, "r+b");
+    if (!file)
+    {
+        perror("File opening failed");
+        return 0;
+    }
+
+    Header header;
+    fread(&header, sizeof(header), 1, file);
+
+    // 사용자 데이터 읽기 (CarNumber에 해당하는 데이터 검색)
+    UserData userData;
+
+    for (int i = 0; i < header.UserDataCount; ++i)
+    {
+        fread(&userData, sizeof(UserData), 1, file);
+        if (strcmp(userData.CarNumber, CarNumber) == 0)
+        {
+            fclose(file);
+            return 1; // 원하는 데이터를 찾았을 때 원하는 결과 문자열로 반환
+        }
+    }
+
+    fclose(file);
+    return 0; // 원하는 데이터를 찾지 못했을 때 기본 메시지 반환
+}
+
+// 사용자 데이터 등록 함수
+void register_data(const char *filename, const char *Name, const char *CarType, const char *CarNumber)
+{
+    FILE *file = fopen(filename, "r+b"); // 읽기/쓰기 모드로 파일 열기 ('b'는 바이너리 모드)
+    if (!file)
+    {
+        perror("File opening failed");
+        return;
+    }
+
+    Header header;
+    Offset offset;
+
+    // 헤더 정보 읽기
+    fread(&header, sizeof(header), 1, file);
 
     // 현재 오프셋 계산
     offset.UserDataOffset = sizeof(Header) + (header.UserDataCount * sizeof(UserData)) + (header.UserDataCount * sizeof(ParkingSpace));
@@ -78,14 +133,23 @@ void register_data(FILE *file, const char *Name, const char *CarType, const char
 
     fclose(file);
 }
-int UpdateParkingSpace(FILE *file, const char *CarNumberToUpdate, const char *NewParkingSpace)
+
+int UpdateParkingSpace(const char *filename, const char *CarNumberToUpdate, const char *NewParkingSpace)
 {
-    Header header = {0};
-    UserData userData = {0};
+    FILE *file = fopen(filename, "r+b");
+
+    if (!file)
+    {
+        perror("File opening failed");
+        return 1;
+    }
+
+    Header header;
+    fread(&header, sizeof(header), 1, file);
+
+    UserData userData;
     int found = 0; // Flag to track if the CarNumberToUpdate is found
     int count = 0; // 바이너리 파일 안의 carNumber가 저장된 위치
-
-    fread(&header, sizeof(header), 1, file);
 
     for (int i = 0; i < header.UserDataCount; ++i)
     {
@@ -124,30 +188,14 @@ int UpdateParkingSpace(FILE *file, const char *CarNumberToUpdate, const char *Ne
     return 0;
 }
 
-// bin파일이 없다면 파일을 새로하나 만든다. bin 파일이 있다면 이 함수는 작동 하지 않난다.
-void create_binfile_if_init(const char *filename)
-{
-    FILE *file1 = fopen(filename, "r");
-    if (!file1)
-    {
-        FILE *file = fopen(filename, "w");
-        fclose(file);
-    }
-    else
-    {
-        fclose(file1);
-    }
-}
-
 int main(int argc, char *argv[])
 {
-    create_binfile_if_init(USER_DATA_BIN_PATH);
-    FILE *file = read_byte_binfile(USER_DATA_BIN_PATH);
-    register_data(file, "고낙연", "superX", "1234-567");
+
+    const char *filename = USER_DATA_BIN_PATH;
+    register_data(filename, "고낙연", "superX", "1234-567");
 
     if (argc < 2)
     {
-        printf("argments less than 1, argc <2\n");
         return 0;
     }
 
@@ -157,10 +205,10 @@ int main(int argc, char *argv[])
     {
         if (argc != 5)
         {
-            printf("argc =! 5, argments is not 4\n");
+            printf("argc =! 5, argments is not 4");
             return 1;
         }
-        register_data(file, argv[2], argv[3], argv[4]);
+        register_data(filename, argv[2], argv[3], argv[4]);
         return 0;
     }
 
@@ -168,11 +216,18 @@ int main(int argc, char *argv[])
     {
         if (argc != 4)
         {
-            printf("argc =! 3, argments is not 3\n");
+            printf("argc =! 3, argments is not 3");
             return 1;
         }
-        UpdateParkingSpace(file, argv[2], argv[3]);
+        UpdateParkingSpace(filename, argv[2], argv[3]);
         return 0;
     }
+
+    if (flag == 3)
+    {
+        Initialize_bin_file(filename); // 파일 초기화
+        return 1;
+    }
+
     return 1;
 }
