@@ -15,6 +15,7 @@ CORS(app)
 
 user_data_management = UserDataManagement(user_data_file=USER_DATA_BIN_FILE_PATH)
 
+
 @app.route("/UserInfo", methods=["POST"])
 def handle_user():
     data = request.json
