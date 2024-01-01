@@ -39,7 +39,7 @@ void ReadUserData(const char *filename, int index, UserData *userData, ParkingSp
         exit(1);
     }
 
-    Header header;
+    Header header = {0};
     fread(&header, sizeof(header), 1, file);
 
     if (index >= 0 && index < header.UserDataCount)
@@ -64,7 +64,7 @@ int main()
 {
     const char *filename = USER_DATA_BIN_PATH;
 
-    Header header;
+    Header header = {0};
     FILE *file = fopen(filename, "rb");
     if (!file)
     {
